@@ -1,0 +1,5 @@
+{
+  "deepseek-chat": { "input": 0.002, "output": 0.008, "unit": "元/千token" },
+  "deepseek-v4.1-flash": { "input": 0.0004, "output": 0.0012, "unit": "元/千token" },
+  "note": "单位为 元/每千 token。基于 DeepSeek 官方公开单价估算，非实时精确值；实际以 DeepSeek 控制台账单为准（误差验收要求 <30%）。"
+}

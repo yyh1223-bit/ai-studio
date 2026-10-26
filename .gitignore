@@ -1,0 +1,14 @@
+# 运行时生成，不进库
+studio.db
+studio.db-wal
+studio.db-shm
+
+# Python
+__pycache__/
+*.pyc
+
+# 交付包
+AI数字工作室_交付包.zip
+
+# 产物（运行时生成）
+# artifacts/ 如需保留演示成品可取消注释

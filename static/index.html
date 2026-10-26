@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 数字工作室</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#181c26; --panel2:#1f2430; --line:#2a3040;
+    --text:#e7eaf0; --muted:#8b93a5; --accent:#5b8cff; --green:#3fb86f;
+    --red:#e5534b; --blue:#5b8cff; --yellow:#e2b93b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    font-size:14px; overflow:hidden;
+  }
+  .wrap{display:flex; flex-direction:column; height:100vh; max-width:1200px; margin:0 auto;}
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; border-bottom:1px solid var(--line);
+    background:linear-gradient(90deg,#141826,#181c26);
+  }
+  header.top h1{font-size:18px; letter-spacing:1px;}
+  header.top .sub{color:var(--muted); font-size:12px; margin-top:2px;}
+  header.top .cost-box{text-align:right;}
+  header.top .cost-box .val{color:var(--yellow); font-weight:700; font-size:16px;}
+  header.top .cost-box .lab{color:var(--muted); font-size:11px;}
+
+  main{flex:1; display:flex; flex-direction:column; overflow:hidden;}
+
+  section.cards{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
+    padding:16px 20px;
+  }
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; position:relative; transition:border-color .2s;}
+  .card .head{display:flex; align-items:center; gap:10px;}
+  .card .emoji{font-size:26px;}
+  .card .who .nm{font-weight:700;}
+  .card .who .rl{color:var(--muted); font-size:11px;}
+  .card .status{margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);}
+  .dot{width:10px; height:10px; border-radius:50%; background:var(--green);}
+  .card.busy{border-color:var(--blue);}
+  .card.busy .dot{background:var(--blue); animation:pulse 1s infinite;}
+  .card.rejected{border-color:var(--red);}
+  .card.rejected .dot{background:var(--red);}
+  .card .body{margin-top:8px; color:var(--muted); font-size:12px; min-height:16px;}
+
+  section.input{display:flex; gap:10px; padding:0 20px 14px;}
+  section.input input{
+    flex:1; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:11px 14px; font-size:14px; outline:none;
+  }
+  section.input input:focus{border-color:var(--accent);}
+  button{background:var(--accent); color:#fff; border:none; border-radius:8px; padding:11px 22px;
+    font-size:14px; font-weight:600; cursor:pointer; transition:filter .15s;}
+  button:hover{filter:brightness(1.12);}
+  button:disabled{background:#3a4255; cursor:not-allowed; filter:none;}
+
+  section.progress{ padding:0 20px 8px;}
+  .pbar{height:10px; background:var(--panel2); border-radius:5px; overflow:hidden;}
+  .pbar .fill{height:100%; width:0; background:linear-gradient(90deg,var(--accent),#7aa2ff); transition:width .4s;}
+  .pmeta{display:flex; justify-content:space-between; margin-top:6px; color:var(--muted); font-size:12px;}
+  .pmeta .stage{color:var(--text);}
+
+  section.fields{
+    flex:1; display:flex; gap:14px; padding:8px 20px 16px; min-height:0;
+  }
+  .col{display:flex; flex-direction:column; flex:1; min-width:0;}
+  .col h2{font-size:14px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; color:var(--muted);}
+  .box{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; overflow-y:auto; flex:1;}
+  .box pre{white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:13px; line-height:1.7;}
+
+  .msg{margin-bottom:12px;}
+  .msg .meta{color:var(--muted); font-size:11px; margin-bottom:3px;}
+  .msg .txt{white-space:pre-wrap; word-break:break-word; line-height:1.7;}
+  .msg.reject .meta{color:var(--red);}
+  .msg.pass .meta{color:var(--green);}
+  .msg.budget .txt{color:var(--red); font-weight:700;}
+  .msg.error .txt{color:var(--red);}
+
+  #art-shelf .item{display:flex; align-items:center; gap:10px; padding:10px; background:var(--panel2);
+    border-radius:8px; margin-bottom:8px;}
+  #art-shelf .item .ic{font-size:20px;}
+  #art-shelf .item a{color:var(--accent); text-decoration:none; word-break:break-all;}
+
+  .toast{position:fixed; top:16px; left:50%; transform:translateX(-50%); background:var(--red);
+    color:#fff; padding:12px 20px; border-radius:8px; font-weight:600; z-index:99;
+    box-shadow:0 6px 20px rgba(0,0,0,.4); display:none;}
+
+  .empty{color:var(--muted); font-size:12px;}
+
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:.4;}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>🏢 AI 数字工作室</h1>
+      <div class="sub">三个人工智能员工 · 实时协作流水线</div>
+    </div>
+    <div class="cost-box">
+      <div class="val" id="costVal">¥0.0000</div>
+      <div class="lab" id="costLab">本会话成本 · 上限 ¥0.50</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="cards" id="cards">
+      <div class="card" id="c-manager"><div class="head"><span class="emoji">💼</span>
+        <div class="who"><div class="nm">主管</div><div class="rl">项目经理</div></div>
+        <div class="status"><span class="dot"></span><span class="st">空闲</span></div></div>
+        <div class="body" id="b-manager"></div></div>
+      <div class="card" id="c-writer"><div class="head"><span class="emoji">✍️</span>
+        <div class="who"><div class="nm">文案</div><div class="rl">资深撰稿人</div></div>
+        <div class="status"><span class="dot"></span><span class="st">空闲</span></div></div>
+        <div class="body" id="b-writer"></div></div>
+      <div class="card" id="c-reviewer"><div class="head"><span class="emoji">🔍</span>
+        <div class="who"><div class="nm">审核</div><div class="rl">毒舌编辑</div></div>
+        <div class="status"><span class="dot"></span><span class="st">空闲</span></div></div>
+        <div class="body" id="b-reviewer"></div></div>
+    </section>
+
+    <section class="input">
+      <input id="req" placeholder="例：给山大自行车协会写一条招新推送文案，150字以内，活泼一点"
+             autocomplete="off" />
+      <button id="startBtn">🚀 开工</button>
+    </section>
+
+    <section class="progress">
+      <div class="pbar"><div class="fill" id="fill"></div></div>
+      <div class="pmeta"><span class="stage" id="stageLabel">待命</span>
+        <span id="stageCount"></span></div>
+    </section>
+
+    <section class="fields">
+      <div class="col">
+        <h2>💬 讨论区</h2>
+        <div class="box" id="discuss"><span class="empty">输入需求，点「开工」，围观三个 AI 员工协作…</span></div>
+      </div>
+      <div class="col">
+        <h2>📦 产物架 <a href="#" id="sessLink" style="color:var(--muted)">历史</a></h2>
+        <div class="box" id="art-shelf"><span class="empty">产物将出现在这里</span></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const UI = {
+  cost: 0, sessionId: null, currentDraft: "", status: {}, draftTurn:0,
+  workerState: {manager:'idle', writer:'idle', reviewer:'idle'}
+};
+
+function progressFor(stage){
+  const m = {assign:8, draft:30, review:50, revise:70, final:90};
+  return m[stage] ?? 0;
+}
+function setStage(stage, label){
+  $('fill').style.width = progressFor(stage)+'%';
+  if(label) $('stageLabel').textContent = label;
+}
+function setWorker(role, st){
+  UI.workerState[role] = st;
+  const card = $('c-'+role);
+  card.className = 'card' + (st==='busy' ? ' busy' : (st==='rejected' ? ' rejected' : ''));
+  card.querySelector('.st').textContent = st==='busy' ? '工作中' : (st==='rejected' ? '已驳回' : '空闲');
+}
+function addMsg(html, cls){
+  const d=$('discuss');
+  if(d.querySelector('.empty')) d.innerHTML='';
+  const div=document.createElement('div'); div.className='msg '+(cls||'');
+  div.innerHTML=html; d.appendChild(div); d.scrollTop=d.scrollHeight;
+}
+function addArt(title, name, url){
+  const s=$('art-shelf');
+  if(s.querySelector('.empty')) s.innerHTML='';
+  const d=document.createElement('div'); d.className='item';
+  d.innerHTML=`<span class="ic">📄</span><a href="${url}" download>${name}</a>`;
+  s.appendChild(d);
+}
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',5000); }
+
+function handleEvent(type, data){
+  switch(type){
+    case 'stage': setStage(data.stage, data.label); break;
+    case 'worker_status': setWorker(data.role, data.status);
+      if(data.status==='busy'){ $('b-'+data.role).textContent='工作中…'; }
+      if(data.status==='idle'||data.status==='rejected'){ }
+      break;
+    case 'cost': { UI.cost=data.cost; $('costVal').textContent='¥'+data.cost.toFixed(4); break; }
+    case 'assign': addMsg(`<div class="meta">🔹 主管 → ${data.to}：</div><div class="txt">${esc(data.content)}</div>`); break;
+    case 'draft_token': {
+      // 流式单字渲染（终态由 pass/reject 消息呈现）
+      if(UI.draftTurn !== data.turn){ UI.draftTurn=data.turn; clearDraftLive(); }
+      let el=$('draft-live');
+      if(!el){ el=document.createElement('div'); el.id='draft-live'; el.className='msg draft';
+        el.innerHTML=`<div class="meta">✍️ 文案 第${data.turn}稿：</div><div class="txt"></div>`;
+        $('discuss').appendChild(el); }
+      el.querySelector('.txt').textContent = data.content;
+      $('discuss').scrollTop=$('discuss').scrollHeight;
+      break;
+    }
+    case 'reject': { clearDraftLive(); setWorker('reviewer','rejected'); setStage('revise',`重新撰写 · 第${data.turn+1}稿`);
+      addMsg(`<div class="meta">🔴 审核打回（${data.score}分）→ 文案：</div><div class="txt">${esc(data.content)}</div>`,'reject'); break; }
+    case 'pass': { clearDraftLive();
+      const note = data.note ? ` 🔸${data.note}` : '';
+      addMsg(`<div class="meta">✅ 审核通过（${data.score}分）${note}</div><div class="txt">${esc(data.content)}</div>`,'pass');
+      setWorker('reviewer','idle'); break; }
+    case 'note': addMsg(`<div class="txt">${esc(data.content)}</div>`); break;
+    case 'summary': addMsg(`<div class="meta">🎯 主管总结：</div><div class="txt">${esc(data.content)}</div>`); break;
+    case 'artifact': { addArt(data.title, data.filename, data.url); setStage('final','完成'); break; }
+    case 'budget_break': toast(data.content); addMsg(`<div class="txt">💥 预算熔断：累计 ¥${UI.cost.toFixed(4)} 超上限</div>`,'budget'); break;
+    case 'error': toast(data.content); addMsg(`<div class="txt">${esc(data.content)}</div>`,'error'); break;
+    case 'system': addMsg(`<div class="meta">系统</div><div class="txt">${esc(data.content)}</div>`); break;
+    case 'end': {
+      $('startBtn').disabled=false;
+      if(data.status==='error'||data.status==='budget'){ $('fill').classList.add('bad'); }
+      $('stageLabel').textContent = data.status==='done' ? '已完成' : (data.status==='budget' ? '已熔断' : '已中止');
+      break;
+    }
+    case 'replay':
+      /* 刷新后回放历史消息，只渲染终态 */
+      if(['assign','reject','pass','summary','system','error','note','budget_break','artifact'].includes(data.type)) handleEvent(data.type, data);
+      break;
+  }
+}
+function clearDraftLive(){ const el=$('draft-live'); if(el){ el.remove(); } }
+function esc(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function startRun(){
+  const req=$('req').value.trim();
+  if(!req){ toast('请输入需求'); return; }
+  $('startBtn').disabled=true;
+  UI.cost=0; UI.draftTurn=0; $('costVal').textContent='¥0.0000'; $('fill').classList.remove('bad');
+  $('discuss').innerHTML=''; $('art-shelf').innerHTML='<span class="empty">产物将出现在这里</span>';
+  try{
+    const r=await fetch('/api/task',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({request:req})});
+    const j=await r.json();
+    UI.sessionId=j.session_id;
+    connect(j.session_id);
+  }catch(e){ toast('发起失败：'+e.message); $('startBtn').disabled=false; }
+}
+
+let es=null;
+function connect(sid){
+  if(es) es.close();
+  es=new EventSource(`/stream/${sid}`);
+  es.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); }catch(e){} };
+  ['stage','worker_status','cost','assign','draft_token','reject','pass','note','summary','artifact','budget_break','error','system','end','replay'].forEach(t=>{
+    es.addEventListener(t, ev=>{ let d; try{ d=JSON.parse(ev.data);}catch(e){return;} handleEvent(t,d); });
+  });
+  es.onerror=()=>{ /* EventSource 自动重连，忽略瞬时错误 */ };
+}
+
+(async function(){
+  try{
+    const r=await fetch('/api/sessions');
+    const list=await r.json();
+    if(list && list.length){
+      const last=list[0];
+      $('sessLink').textContent = `历史 · 最近:#${last.id} ${last.status}`;
+      // 若最近会话未结束，自动续接
+      if(last.status==='running'){
+        UI.sessionId=last.id;
+        connect(last.id);
+        $('req').value = last.request;
+      }
+    }
+  }catch(e){}
+})();
+
+$('startBtn').onclick=startRun;
+$('req').addEventListener('keydown', e=>{ if(e.key==='Enter') startRun(); });
+</script>
+</body>
+</html>
